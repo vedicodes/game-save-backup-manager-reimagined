@@ -4,10 +4,12 @@ import (
 	"fmt"
 	"io"
 	"strings"
+	"time"
 
 	"github.com/charmbracelet/bubbles/list"
 	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/charmbracelet/lipgloss"
 	"github.com/gemini/game-save-backup-manager-reimagined/internal/backup"
 	"github.com/gemini/game-save-backup-manager-reimagined/internal/config"
 	"github.com/gemini/game-save-backup-manager-reimagined/internal/tui"
@@ -34,6 +36,9 @@ const (
 // A message to indicate that the database is now initialized.
 type dbInitializedMsg struct{}
 
+// A message to clear the notification after a delay
+type clearNotificationMsg struct{}
+
 // model holds the state of the entire application.
 type model struct {
 	styles    *tui.Styles
@@ -55,7 +60,7 @@ func NewModel(cfg *config.Config, isFirstRun bool) *model {
 	selected := make(map[int]struct{})
 
 	// Create the list and text input components right away.
-	list := list.New(nil, newItemDelegate(selected), 0, 0)
+	list := list.New(nil, newNormalItemDelegate(), 0, 0)
 	textInput := textinput.New()
 
 	m := &model{
@@ -70,7 +75,7 @@ func NewModel(cfg *config.Config, isFirstRun bool) *model {
 		m.state = firstRunView
 		m.textInput.Placeholder = "Enter your game's save file path"
 		m.textInput.Focus()
-		m.textInput.Width = 50
+		m.textInput.Width = 50 // Will be updated on first WindowSizeMsg
 	} else {
 		m.state = initializingView
 		// DB will be initialized via a command.
@@ -104,7 +109,12 @@ func (m *model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.width = msg.Width
 		m.height = msg.Height
 		// Update the list size.
-		m.list.SetSize(m.width, m.height-4) // Adjust for title/help text.
+		m.list.SetSize(m.width, m.height-6) // Adjust for title/help text with more spacing
+		// Update text input width to scale with window
+		m.textInput.Width = m.width - 10 // Leave some margin
+		if m.textInput.Width < 20 {
+			m.textInput.Width = 20 // Minimum width
+		}
 		return m, nil
 
 	case tea.KeyMsg:
@@ -116,8 +126,14 @@ func (m *model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if m.state != firstRunView && m.state != mainMenuView && msg.String() == "q" {
 			// Allow quitting from most views back to the main menu.
 			m.state = mainMenuView
+			m.message = "" // Clear any pending messages when returning to main menu
 			return m, nil
 		}
+
+	case clearNotificationMsg:
+		// Clear the notification message
+		m.message = ""
+		return m, nil
 
 	case dbInitializedMsg:
 		// This is a command that signals the DB is ready.
@@ -165,11 +181,8 @@ func (m *model) View() string {
 
 	// Render messages if they exist.
 	if m.message != "" {
-		// This is a transient message. We show it, then clear it.
-		msg := m.message
-		m.message = "" // Clear after rendering once.
-		// We still render the underlying view, with the message on top.
-		return m.styles.Success.Render(msg) + "\n" + m.currentView()
+		// Show the message for industry standard time (don't clear immediately)
+		return m.styles.Success.Render(m.message) + "\n" + m.currentView()
 	}
 
 	return m.currentView()
@@ -210,7 +223,7 @@ func (m *model) currentView() string {
 	case mainMenuView:
 		help = m.styles.Help.Render("Press 'ctrl+c' to quit.")
 	case deletingView:
-		help = m.styles.Help.Render("space: toggle, a: select all, n: deselect all, enter: confirm, q: back")
+		help = m.styles.Help.Render("space: toggle, →: select all, ←: deselect all, enter: confirm, q: back")
 	case initializingView:
 		help = "" // No help text during initialization
 	default:
@@ -245,7 +258,7 @@ func (m *model) refreshBackupList(title string) tea.Cmd {
 		return func() tea.Msg { return err }
 	}
 	m.list.SetItems(items)
-	m.list.SetSize(m.width, m.height-4)
+	m.list.SetSize(m.width, m.height-6)
 	return nil
 }
 
@@ -281,19 +294,40 @@ func (m *model) updateMainMenu(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case "1":
 			m.state = createBackupView
 			m.textInput.Placeholder = "My awesome backup"
+			m.textInput.SetValue("") // Clear previous input
 			m.textInput.Focus()
 			m.textInput.CharLimit = 156
-			m.textInput.Width = 50
+			m.textInput.Width = m.width - 10 // Scale with window width
+			if m.textInput.Width < 20 {
+				m.textInput.Width = 20
+			}
 			return m, nil
 		case "2":
 			m.state = backupListView
-			return m, m.refreshBackupList("Select a backup to restore")
+			// Switch back to normal delegate (no checkboxes)
+			m.list.SetDelegate(newNormalItemDelegate())
+			// Reset list selection to first item
+			cmd := m.refreshBackupList("Select a backup to restore")
+			m.list.Select(0)
+			return m, cmd
 		case "3":
 			m.state = backupListView
-			return m, m.refreshBackupList("Available Backups")
+			// Switch back to normal delegate (no checkboxes)
+			m.list.SetDelegate(newNormalItemDelegate())
+			// Reset list selection to first item
+			cmd := m.refreshBackupList("Available Backups")
+			m.list.Select(0)
+			return m, cmd
 		case "4":
 			m.state = deletingView
-			return m, m.refreshBackupList("Select backups to delete")
+			// Clear previous selections when entering delete view
+			m.selected = make(map[int]struct{})
+			// Switch to selection delegate for checkboxes
+			m.list.SetDelegate(newSelectItemDelegate(m.selected))
+			// Reset list selection to first item
+			cmd := m.refreshBackupList("Select backups to delete")
+			m.list.Select(0)
+			return m, cmd
 		case "5":
 			m.state = settingsView
 			return m, nil
@@ -339,12 +373,12 @@ func (m *model) updateBackupViews(msg tea.Msg) (tea.Model, tea.Cmd) {
 					err := m.db.RestoreBackup(backup.Backup(b), m.config.SavePath)
 					if err != nil {
 						m.err = err
+						return m, nil
 					} else {
-						m.message = "Backup restored successfully!"
+						m.state = mainMenuView
+						return m, m.showNotification("Backup restored successfully!")
 					}
 				}
-				m.state = mainMenuView
-				return m, nil
 			}
 			if m.state == deleteConfirmationView {
 				var backupsToDelete []backup.Backup
@@ -365,12 +399,12 @@ func (m *model) updateBackupViews(msg tea.Msg) (tea.Model, tea.Cmd) {
 					err := m.db.DeleteBackups(backupsToDelete)
 					if err != nil {
 						m.err = err
+						return m, nil
 					} else {
-						m.message = fmt.Sprintf("%d backup(s) deleted successfully!", len(backupsToDelete))
+						m.state = mainMenuView
+						return m, m.showNotification(fmt.Sprintf("%d backup(s) deleted successfully!", len(backupsToDelete)))
 					}
 				}
-				m.state = mainMenuView
-				return m, nil
 			}
 		case "n", "N", "esc":
 			if m.state == deleteConfirmationView {
@@ -423,14 +457,14 @@ func (m *model) updateDeletingView(msg tea.Msg) (tea.Model, tea.Cmd) {
 				}
 				m.list.SetItem(index, i)
 			}
-		case "a":
+		case "right":
 			// Select all.
 			for i := range m.list.Items() {
 				m.selected[i] = struct{}{}
 			}
 			// Force a re-render of the list.
 			return m, m.list.SetItems(m.list.Items())
-		case "n":
+		case "left":
 			// Deselect all.
 			for k := range m.selected {
 				delete(m.selected, k)
@@ -465,11 +499,11 @@ func (m *model) updateCreateBackup(msg tea.Msg) (tea.Model, tea.Cmd) {
 			err := m.db.CreateBackup(m.config.SavePath, m.config.BackupDir, backupName)
 			if err != nil {
 				m.err = err
+				return m, nil
 			} else {
-				m.message = "Backup created successfully!"
+				m.state = mainMenuView
+				return m, m.showNotification("Backup created successfully!")
 			}
-			m.state = mainMenuView
-			return m, nil
 		case "esc":
 			m.state = mainMenuView
 			return m, nil
@@ -496,21 +530,29 @@ func (m *model) updateSettings(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case "1":
 			m.state = changeSavePathView
 			m.textInput.Placeholder = "Enter new save path"
+			m.textInput.SetValue("") // Clear previous input
 			m.textInput.Focus()
-			m.textInput.Width = 50
+			m.textInput.Width = m.width - 10 // Scale with window width
+			if m.textInput.Width < 20 {
+				m.textInput.Width = 20
+			}
 			return m, nil
 		case "2":
 			m.state = changeBackupDirView
 			m.textInput.Placeholder = "Enter new backup directory"
+			m.textInput.SetValue("") // Clear previous input
 			m.textInput.Focus()
-			m.textInput.Width = 50
+			m.textInput.Width = m.width - 10 // Scale with window width
+			if m.textInput.Width < 20 {
+				m.textInput.Width = 20
+			}
 			return m, nil
 		case "3":
 			m.config.AutoBackup = !m.config.AutoBackup
 			if err := m.config.Save(); err != nil {
 				m.err = err
 			} else {
-				m.message = "Auto-backup toggled successfully!"
+				return m, m.showNotification("Auto-backup toggled successfully!")
 			}
 			return m, nil
 		case "esc":
@@ -547,7 +589,7 @@ func (m *model) updateChangeSavePath(msg tea.Msg) (tea.Model, tea.Cmd) {
 			if err := m.config.Save(); err != nil {
 				m.err = err
 			} else {
-				m.message = "Save path updated successfully!"
+				return m, m.showNotification("Save path updated successfully!")
 			}
 			m.state = settingsView
 			return m, nil
@@ -581,7 +623,7 @@ func (m *model) updateChangeBackupDir(msg tea.Msg) (tea.Model, tea.Cmd) {
 			if err := m.config.Save(); err != nil {
 				m.err = err
 			} else {
-				m.message = "Backup directory updated successfully!"
+				return m, m.showNotification("Backup directory updated successfully!")
 			}
 			m.state = settingsView
 			return m, nil
@@ -662,18 +704,75 @@ type itemDelegate struct {
 	selected map[int]struct{}
 }
 
-func newItemDelegate(selected map[int]struct{}) *itemDelegate {
+type normalItemDelegate struct {
+	list.DefaultDelegate
+}
+
+// newNormalItemDelegate creates a delegate for normal list views (no checkboxes)
+func newNormalItemDelegate() *normalItemDelegate {
+	d := &normalItemDelegate{}
+	d.Styles = list.NewDefaultItemStyles()
+	
+	// Enhanced styling with boxes
+	d.Styles.SelectedTitle = tui.DefaultStyles().Selected.
+		Border(lipgloss.RoundedBorder()).
+		BorderForeground(lipgloss.Color("62")).
+		Padding(0, 1)
+	d.Styles.SelectedDesc = tui.DefaultStyles().Selected.Copy().Faint(true).Padding(0, 1)
+	d.Styles.NormalTitle = tui.DefaultStyles().ListItem.Padding(0, 1)
+	d.Styles.NormalDesc = tui.DefaultStyles().ListItem.Copy().Faint(true).Padding(0, 1)
+	return d
+}
+
+// newSelectItemDelegate creates a delegate for delete view (with checkboxes)
+func newSelectItemDelegate(selected map[int]struct{}) *itemDelegate {
 	d := &itemDelegate{
 		selected: selected,
 	}
 	d.Styles = list.NewDefaultItemStyles()
-	d.Styles.SelectedTitle = tui.DefaultStyles().Selected
-	d.Styles.SelectedDesc = tui.DefaultStyles().Selected.Copy().Faint(true)
-	d.Styles.NormalTitle = tui.DefaultStyles().ListItem
-	d.Styles.NormalDesc = tui.DefaultStyles().ListItem.Copy().Faint(true)
+	
+	// Enhanced styling with boxes for selection view
+	d.Styles.SelectedTitle = tui.DefaultStyles().Selected.
+		Border(lipgloss.RoundedBorder()).
+		BorderForeground(lipgloss.Color("62")).
+		Padding(0, 1)
+	d.Styles.SelectedDesc = tui.DefaultStyles().Selected.Copy().Faint(true).Padding(0, 1)
+	d.Styles.NormalTitle = tui.DefaultStyles().ListItem.Padding(0, 1)
+	d.Styles.NormalDesc = tui.DefaultStyles().ListItem.Copy().Faint(true).Padding(0, 1)
 	return d
 }
 
+// Render method for normalItemDelegate (no checkboxes)
+func (d *normalItemDelegate) Render(w io.Writer, m list.Model, index int, item list.Item) {
+	i, ok := item.(listItem)
+	if !ok {
+		return
+	}
+
+	title := i.Title()
+	desc := i.Description()
+
+	// Combine title and description for unified styling
+	content := title + "\n" + desc
+
+	if m.Index() == index {
+		// Apply border to the entire content (title + description)
+		styledContent := lipgloss.NewStyle().
+			Border(lipgloss.RoundedBorder()).
+			BorderForeground(lipgloss.Color("62")).
+			Padding(0, 1).
+			Render(content)
+		fmt.Fprint(w, styledContent)
+	} else {
+		// Normal styling without border
+		styledContent := lipgloss.NewStyle().
+			Padding(0, 1).
+			Render(content)
+		fmt.Fprint(w, styledContent)
+	}
+}
+
+// Render method for itemDelegate (with checkboxes for delete view)
 func (d *itemDelegate) Render(w io.Writer, m list.Model, index int, item list.Item) {
 	i, ok := item.(listItem)
 	if !ok {
@@ -682,26 +781,43 @@ func (d *itemDelegate) Render(w io.Writer, m list.Model, index int, item list.It
 
 	var checkbox string
 	if _, ok := d.selected[index]; ok {
-		checkbox = "[x] "
+		checkbox = "☑ "
 	} else {
-		checkbox = "[ ] "
+		checkbox = "☐ "
 	}
 
 	title := i.Title()
 	desc := i.Description()
 
-	if m.Index() == index {
-		title = d.Styles.SelectedTitle.Render(checkbox + title)
-		desc = d.Styles.SelectedDesc.Render("  " + desc)
-	} else {
-		title = d.Styles.NormalTitle.Render(checkbox + title)
-		desc = d.Styles.NormalDesc.Render("  " + desc)
-	}
+	// Combine checkbox, title and description for unified styling
+	content := checkbox + title + "\n" + "  " + desc
 
-	fmt.Fprint(w, title+"\n"+desc)
+	if m.Index() == index {
+		// Apply border to the entire content (checkbox + title + description)
+		styledContent := lipgloss.NewStyle().
+			Border(lipgloss.RoundedBorder()).
+			BorderForeground(lipgloss.Color("62")).
+			Padding(0, 1).
+			Render(content)
+		fmt.Fprint(w, styledContent)
+	} else {
+		// Normal styling without border
+		styledContent := lipgloss.NewStyle().
+			Padding(0, 1).
+			Render(content)
+		fmt.Fprint(w, styledContent)
+	}
 }
 
-// Set a message to be displayed to the user.
+// Set a message to be displayed to the user with auto-clear timer.
 func (m *model) setMessage(msg string) {
 	m.message = msg
+}
+
+// showNotification sets a message and returns a command to clear it after 2 seconds
+func (m *model) showNotification(msg string) tea.Cmd {
+	m.message = msg
+	return tea.Tick(2*time.Second, func(t time.Time) tea.Msg {
+		return clearNotificationMsg{}
+	})
 }
