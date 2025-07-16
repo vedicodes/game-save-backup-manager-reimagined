@@ -22,7 +22,7 @@ func Load() (*Config, bool, error) {
 	}
 
 	if _, err := os.Stat(configPath); os.IsNotExist(err) {
-		return &Config{AutoBackup: true}, true, nil
+		return &Config{AutoBackup: false}, true, nil
 	}
 
 	data, err := os.ReadFile(configPath)

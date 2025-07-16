@@ -29,9 +29,9 @@ func main() {
 		handleError(err)
 	}
 
-	// The model is now responsible for handling the first-run state.
-	model := ui.NewModel(cfg, isFirstRun)
-	p := tea.NewProgram(model, tea.WithAltScreen())
+	// Create the new controller-based UI
+	controller := ui.NewController(cfg, isFirstRun)
+	p := tea.NewProgram(controller, tea.WithAltScreen())
 
 	if _, err := p.Run(); err != nil {
 		handleError(err)

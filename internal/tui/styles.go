@@ -13,6 +13,7 @@ type Styles struct {
 	Error      lipgloss.Style
 	Success    lipgloss.Style
 	Warning    lipgloss.Style
+	TextInput  lipgloss.Style
 }
 
 // DefaultStyles returns the default styles.
@@ -27,5 +28,9 @@ func DefaultStyles() *Styles {
 		Error:      lipgloss.NewStyle().Foreground(lipgloss.Color("9")).Bold(true),
 		Success:    lipgloss.NewStyle().Foreground(lipgloss.Color("10")).Bold(true),
 		Warning:    lipgloss.NewStyle().Foreground(lipgloss.Color("11")).Bold(true),
+		TextInput:  lipgloss.NewStyle().
+			Border(lipgloss.RoundedBorder()).
+			BorderForeground(lipgloss.Color("62")).
+			Padding(0, 1),
 	}
 }
