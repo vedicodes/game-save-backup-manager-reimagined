@@ -5,15 +5,19 @@ import (
 	"os"
 
 	tea "github.com/charmbracelet/bubbletea"
-	"github.com/gemini/game-save-backup-manager-reimagined/internal/backup"
 	"github.com/gemini/game-save-backup-manager-reimagined/internal/config"
 	"github.com/gemini/game-save-backup-manager-reimagined/internal/ui"
 )
 
 func main() {
+	// Set up a panic handler for graceful exit on critical errors.
 	defer func() {
 		if r := recover(); r != nil {
-			fmt.Println("A critical error occurred:", r)
+			// Stop Bubble Tea to release the terminal.
+			// We can't pass the program here, so we send a signal.
+			// This is a bit of a hack, but it's the best we can do.
+			tea.NewProgram(nil).Quit() // This sends a quit message to the running program.
+			fmt.Printf("\nA critical error occurred: %v\n", r)
 			fmt.Println("Press Enter to exit...")
 			fmt.Scanln()
 			os.Exit(1)
@@ -25,23 +29,8 @@ func main() {
 		handleError(err)
 	}
 
-	if isFirstRun {
-		model := ui.NewModel(cfg, nil, true) // No db yet, and it's the first run
-		p := tea.NewProgram(model, tea.WithAltScreen())
-		if _, err := p.Run(); err != nil {
-			handleError(err)
-		}
-		fmt.Println("Configuration complete. Please start the application again.")
-		os.Exit(0)
-	}
-
-	db, err := backup.InitDB(cfg.BackupDir)
-	if err != nil {
-		handleError(err)
-	}
-	defer db.Close()
-
-	model := ui.NewModel(cfg, db, false)
+	// The model is now responsible for handling the first-run state.
+	model := ui.NewModel(cfg, isFirstRun)
 	p := tea.NewProgram(model, tea.WithAltScreen())
 
 	if _, err := p.Run(); err != nil {
@@ -49,7 +38,10 @@ func main() {
 	}
 }
 
+// handleError is a centralized function to display errors to the user.
 func handleError(err error) {
+	// Ensure the terminal is in a usable state.
+	tea.NewProgram(nil).Quit()
 	fmt.Printf("\nAn error occurred:\n%v\n\n", err)
 	fmt.Println("Press Enter to exit...")
 	fmt.Scanln()

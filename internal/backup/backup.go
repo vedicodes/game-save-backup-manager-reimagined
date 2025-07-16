@@ -123,3 +123,28 @@ func (db *DB) DeleteBackup(b Backup) error {
 	_, err := db.Exec("DELETE FROM backups WHERE id = ?", b.ID)
 	return err
 }
+// DeleteBackups deletes multiple backups in a single transaction.
+func (db *DB) DeleteBackups(backups []Backup) error {
+	tx, err := db.Begin()
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+
+	for _, b := range backups {
+		// Delete the file
+		if err := os.Remove(b.Path); err != nil {
+			// Continue with other deletions even if one file fails
+			// This handles cases where the file might already be deleted
+			continue
+		}
+		
+		// Delete from database
+		_, err := tx.Exec("DELETE FROM backups WHERE id = ?", b.ID)
+		if err != nil {
+			return err
+		}
+	}
+
+	return tx.Commit()
+}
