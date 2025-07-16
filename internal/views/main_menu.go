@@ -2,9 +2,9 @@ package views
 
 import (
 	tea "github.com/charmbracelet/bubbletea"
-	"github.com/gemini/game-save-backup-manager-reimagined/internal/app"
-	"github.com/gemini/game-save-backup-manager-reimagined/internal/components"
-	"github.com/gemini/game-save-backup-manager-reimagined/internal/state"
+	"github.com/vedicodes/game-save-backup-manager-reimagined/internal/app"
+	"github.com/vedicodes/game-save-backup-manager-reimagined/internal/components"
+	"github.com/vedicodes/game-save-backup-manager-reimagined/internal/state"
 )
 
 // MainMenuHandler handles the main menu view

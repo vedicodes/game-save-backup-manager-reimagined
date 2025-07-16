@@ -4,7 +4,7 @@ import (
 	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
-	"github.com/gemini/game-save-backup-manager-reimagined/internal/layout"
+	"github.com/vedicodes/game-save-backup-manager-reimagined/internal/layout"
 )
 
 // NotificationManager handles notification display and timing

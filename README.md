@@ -1,6 +1,17 @@
 # Game Save Backup Manager - Reimagined
 
-A modern, interactive, and robust command-line tool for managing your game save backups, re-implemented with a TUI (Terminal User Interface) using Bubble Tea and Lipgloss.
+A modern, interactive, and robust command-line tool for managing your game save backups, built with a clean, maintainable architecture using Bubble Tea and Lipgloss.
+
+## Architecture
+
+This application follows industry-standard software architecture principles:
+
+- **Controller-Based UI**: Clean separation between UI logic and business logic
+- **Service Layer**: Dedicated backup service for all backup operations
+- **State Management**: Centralized state transitions and validation
+- **Component Architecture**: Reusable UI components with consistent styling
+- **Configuration Management**: Persistent settings with automatic first-run setup
+- **No Magic Numbers**: All layout constants centralized for maintainability
 
 ## Features
 
@@ -23,7 +34,7 @@ A modern, interactive, and robust command-line tool for managing your game save 
 
 1.  **Clone the repository:**
     ```sh
-    git clone https://github.com/gemini/game-save-backup-manager-reimagined.git
+    git clone https://github.com/vedicodes/game-save-backup-manager-reimagined.git
     cd game-save-backup-manager-reimagined
     ```
 
@@ -58,6 +69,32 @@ The `config.json` file has the following structure:
 {
   "save_path": "path/to/your/game.sav",
   "backup_dir": "path/to/your/backups",
-  "auto_backup": true
+  "auto_backup": false
 }
 ```
+
+## Project Structure
+
+```
+internal/
+├── app/           # Application orchestration layer
+├── backup/        # Database and backup operations
+├── components/    # Reusable UI components
+├── config/        # Configuration management
+├── layout/        # UI layout constants
+├── services/      # Business logic services
+├── state/         # State management
+├── tui/           # Terminal UI styling
+├── ui/            # UI controllers
+├── validation/    # Input validation
+└── views/         # View handlers
+```
+
+## Key Features
+
+- **Two-Step First Run Setup**: Guides users through save path and backup directory configuration
+- **Auto-Generated Backup Names**: Creates timestamped backups when no name is provided
+- **Deletion Confirmation**: Standard confirmation dialog before deleting backups
+- **Auto-Backup Before Restore**: Optional feature to create backup before restoration
+- **Responsive UI**: Input fields adapt to terminal window size
+- **Consistent Help Text**: Context-appropriate help positioned at window bottom

@@ -6,13 +6,13 @@ import (
 	"github.com/charmbracelet/bubbles/list"
 	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
-	"github.com/gemini/game-save-backup-manager-reimagined/internal/backup"
-	"github.com/gemini/game-save-backup-manager-reimagined/internal/components"
-	"github.com/gemini/game-save-backup-manager-reimagined/internal/config"
-	"github.com/gemini/game-save-backup-manager-reimagined/internal/layout"
-	"github.com/gemini/game-save-backup-manager-reimagined/internal/services"
-	"github.com/gemini/game-save-backup-manager-reimagined/internal/state"
-	"github.com/gemini/game-save-backup-manager-reimagined/internal/tui"
+	"github.com/vedicodes/game-save-backup-manager-reimagined/internal/backup"
+	"github.com/vedicodes/game-save-backup-manager-reimagined/internal/components"
+	"github.com/vedicodes/game-save-backup-manager-reimagined/internal/config"
+	"github.com/vedicodes/game-save-backup-manager-reimagined/internal/layout"
+	"github.com/vedicodes/game-save-backup-manager-reimagined/internal/services"
+	"github.com/vedicodes/game-save-backup-manager-reimagined/internal/state"
+	"github.com/vedicodes/game-save-backup-manager-reimagined/internal/tui"
 )
 
 // Application represents the main application

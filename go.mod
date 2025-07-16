@@ -1,4 +1,4 @@
-module github.com/gemini/game-save-backup-manager-reimagined
+module github.com/vedicodes/game-save-backup-manager-reimagined
 
 go 1.24.3
 

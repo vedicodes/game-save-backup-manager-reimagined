@@ -5,8 +5,8 @@ import (
 	"os"
 
 	tea "github.com/charmbracelet/bubbletea"
-	"github.com/gemini/game-save-backup-manager-reimagined/internal/config"
-	"github.com/gemini/game-save-backup-manager-reimagined/internal/ui"
+	"github.com/vedicodes/game-save-backup-manager-reimagined/internal/config"
+	"github.com/vedicodes/game-save-backup-manager-reimagined/internal/ui"
 )
 
 func main() {

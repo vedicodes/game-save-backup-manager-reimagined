@@ -5,11 +5,11 @@ import (
 	"strings"
 
 	tea "github.com/charmbracelet/bubbletea"
-	"github.com/gemini/game-save-backup-manager-reimagined/internal/app"
-	"github.com/gemini/game-save-backup-manager-reimagined/internal/components"
-	"github.com/gemini/game-save-backup-manager-reimagined/internal/config"
-	"github.com/gemini/game-save-backup-manager-reimagined/internal/state"
-	"github.com/gemini/game-save-backup-manager-reimagined/internal/views"
+	"github.com/vedicodes/game-save-backup-manager-reimagined/internal/app"
+	"github.com/vedicodes/game-save-backup-manager-reimagined/internal/components"
+	"github.com/vedicodes/game-save-backup-manager-reimagined/internal/config"
+	"github.com/vedicodes/game-save-backup-manager-reimagined/internal/state"
+	"github.com/vedicodes/game-save-backup-manager-reimagined/internal/views"
 )
 
 // Controller is the main UI controller that orchestrates the application

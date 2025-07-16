@@ -4,9 +4,9 @@ import (
 	"fmt"
 
 	"github.com/charmbracelet/bubbles/list"
-	"github.com/gemini/game-save-backup-manager-reimagined/internal/backup"
-	"github.com/gemini/game-save-backup-manager-reimagined/internal/components"
-	"github.com/gemini/game-save-backup-manager-reimagined/internal/config"
+	"github.com/vedicodes/game-save-backup-manager-reimagined/internal/backup"
+	"github.com/vedicodes/game-save-backup-manager-reimagined/internal/components"
+	"github.com/vedicodes/game-save-backup-manager-reimagined/internal/config"
 )
 
 // BackupService handles all backup-related business logic

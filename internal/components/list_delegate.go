@@ -6,9 +6,9 @@ import (
 
 	"github.com/charmbracelet/bubbles/list"
 	"github.com/charmbracelet/lipgloss"
-	"github.com/gemini/game-save-backup-manager-reimagined/internal/backup"
-	"github.com/gemini/game-save-backup-manager-reimagined/internal/layout"
-	"github.com/gemini/game-save-backup-manager-reimagined/internal/tui"
+	"github.com/vedicodes/game-save-backup-manager-reimagined/internal/backup"
+	"github.com/vedicodes/game-save-backup-manager-reimagined/internal/layout"
+	"github.com/vedicodes/game-save-backup-manager-reimagined/internal/tui"
 )
 
 // ListItem wraps backup.Backup to implement list.Item interface
