@@ -781,16 +781,16 @@ func (d *itemDelegate) Render(w io.Writer, m list.Model, index int, item list.It
 
 	var checkbox string
 	if _, ok := d.selected[index]; ok {
-		checkbox = "☑ "
+		checkbox = "☑"
 	} else {
-		checkbox = "☐ "
+		checkbox = "☐"
 	}
 
 	title := i.Title()
 	desc := i.Description()
 
-	// Combine checkbox, title and description for unified styling
-	content := checkbox + title + "\n" + "  " + desc
+	// Combine checkbox, title and description with better formatting
+	content := fmt.Sprintf("%s  %s\n    %s", checkbox, title, desc)
 
 	if m.Index() == index {
 		// Apply border to the entire content (checkbox + title + description)
